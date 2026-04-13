@@ -19,7 +19,7 @@ A full-stack task management system built with Go, React, and PostgreSQL. Users 
 
 **Database** — PostgreSQL with golang-migrate for schema management. Custom enum types (`task_status`, `task_priority`) enforce valid values at the database level. All migrations have both up and down files. Indexes on all foreign keys and the status column for query performance.
 
-**Frontend** — React with TypeScript and Tailwind CSS v4 (no component library). I built custom components to keep the bundle lean and demonstrate component design. State management uses React Context for auth and theme, with local state for everything else — no Redux needed at this scale. The project detail page features a **drag-and-drop Kanban board** (using `@dnd-kit`) alongside a traditional list view, with a toggle to switch between them.
+**Frontend** — React with TypeScript and Tailwind CSS v4 (no component library). I built custom components to keep the bundle lean and demonstrate component design. State management uses React Context for auth and theme, with local state for everything else — no Redux needed at this scale.
 
 **API design** — RESTful with proper HTTP status codes (400 validation, 401 unauth, 403 forbidden, 404 not found). List endpoints return paginated responses. Task update/delete endpoints use `/tasks/:id` (not project-scoped) since task IDs are globally unique.
 
@@ -147,29 +147,17 @@ All endpoints return `Content-Type: application/json`. Protected endpoints requi
 { "error": "not found" }
 ```
 
-## Bonus Features Implemented
+## Bonus Features
 
-- **Drag-and-drop Kanban board** — Tasks can be dragged between To Do, In Progress, and Done columns using `@dnd-kit`. Includes drag overlay, drop indicators, and optimistic UI. Toggle between List and Board views (persisted in localStorage).
-- **Dark mode toggle** — Persists across sessions via localStorage. Respects system preference on first visit.
-- **Pagination** — Backend list endpoints support `?page=&limit=` query parameters with total count metadata.
-- **Stats endpoint** — `GET /projects/:id/stats` returns task counts grouped by status and by assignee.
-- **6 integration tests** — Tests for user registration, duplicate email handling, login success/failure, project creation, and validation error format. Located in `backend/internal/handler/auth_test.go`.
-
-## Running Tests
-
-Integration tests require a PostgreSQL database. With Docker running:
-
-```bash
-# Start just the database
-docker compose up db -d
-
-# Run tests (from the backend directory)
-cd backend
-TEST_DATABASE_URL="postgres://taskflow:taskflow@localhost:5432/taskflow?sslmode=disable" go test ./internal/handler/ -v
-```
+- **Dark mode** — Toggle in the navbar, persists across sessions via localStorage. Respects system preference on first visit.
+- **Pagination** — Backend list endpoints support `?page=` and `?limit=` query parameters with total count metadata.
+- **Project stats endpoint** — `GET /projects/:id/stats` returns task counts grouped by status and by assignee.
+- **Integration tests** — 6 tests covering registration, duplicate email handling, login (success + wrong password), project creation, and input validation (`backend/internal/handler/auth_test.go`).
+- **Optimistic UI** — Task status changes update instantly in the UI and revert on error.
 
 ## What I'd Do With More Time
 
+- **Drag-and-drop** — Kanban board view with drag-and-drop to change task status columns.
 - **Refresh tokens** — Add a refresh token flow with token rotation for better security.
 - **Real-time updates** — WebSocket or SSE for live task updates when multiple users are on the same project.
 - **Assignee search** — The task modal should fetch and display project members in the assignee dropdown. Currently it accepts a UUID but doesn't show a user picker.

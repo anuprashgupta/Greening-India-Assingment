@@ -10,22 +10,17 @@ import {
   ClipboardList,
   Save,
   X,
-  List,
-  Columns3,
 } from 'lucide-react';
 import { getProject, updateProject, deleteProject } from '../api/projects';
 import { createTask, updateTask, deleteTask } from '../api/tasks';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
-import KanbanBoard from '../components/KanbanBoard';
 import TaskModal from '../components/TaskModal';
 import type { TaskFormData } from '../components/TaskModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import type { Project, Task } from '../types';
-
-type ViewMode = 'list' | 'kanban';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -37,11 +32,6 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('taskflow-view-mode') as ViewMode) || 'kanban';
-  });
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -62,11 +52,6 @@ export default function ProjectDetail() {
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message });
-  };
-
-  const toggleViewMode = (mode: ViewMode) => {
-    setViewMode(mode);
-    localStorage.setItem('taskflow-view-mode', mode);
   };
 
   useEffect(() => {
@@ -176,10 +161,12 @@ export default function ProjectDetail() {
   // Optimistic status change
   const handleStatusChange = async (task: Task, newStatus: Task['status']) => {
     const oldStatus = task.status;
+    // Optimistic update
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
     try {
       await updateTask(task.id, { status: newStatus });
     } catch {
+      // Revert on error
       setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: oldStatus } : t)));
       showToast('error', 'Failed to update status');
     }
@@ -241,7 +228,7 @@ export default function ProjectDetail() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar />
 
-      <main className={`mx-auto px-4 py-8 sm:px-6 lg:px-8 ${viewMode === 'kanban' ? 'max-w-7xl' : 'max-w-5xl'}`}>
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Back button */}
         <button
           onClick={() => navigate('/projects')}
@@ -285,11 +272,11 @@ export default function ProjectDetail() {
               </div>
             </div>
           ) : (
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{project.name}</h1>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">{project.name}</h1>
                 {project.description && (
-                  <p className="mt-1 text-gray-500 dark:text-gray-400">{project.description}</p>
+                  <p className="mt-1 text-sm sm:text-base text-gray-500 dark:text-gray-400">{project.description}</p>
                 )}
               </div>
               {isOwner && (
@@ -315,55 +302,22 @@ export default function ProjectDetail() {
           )}
         </div>
 
-        {/* Tasks section header */}
+        {/* Tasks section */}
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Tasks ({filteredTasks.length})
-            </h2>
-
-            {/* View toggle */}
-            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
-              <button
-                onClick={() => toggleViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-                aria-label="List view"
-              >
-                <List size={14} />
-                List
-              </button>
-              <button
-                onClick={() => toggleViewMode('kanban')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === 'kanban'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
-                aria-label="Kanban view"
-              >
-                <Columns3 size={14} />
-                Board
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {viewMode === 'list' && (
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className={selectClass}
-              >
-                <option value="all">All Status</option>
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-            )}
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Tasks ({filteredTasks.length})
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={selectClass}
+            >
+              <option value="all">All Status</option>
+              <option value="todo">To Do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
 
             <select
               value={assigneeFilter}
@@ -392,37 +346,29 @@ export default function ProjectDetail() {
           </div>
         </div>
 
-        {/* Task content */}
-        {tasks.length === 0 ? (
+        {filteredTasks.length === 0 ? (
           <EmptyState
             icon={<ClipboardList size={64} />}
-            title="No tasks yet"
-            description="Create your first task to get started."
-            action={
-              <button
-                onClick={() => {
-                  setEditingTask(null);
-                  setTaskModalOpen(true);
-                }}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <Plus size={16} />
-                Create Task
-              </button>
+            title={tasks.length === 0 ? 'No tasks yet' : 'No matching tasks'}
+            description={
+              tasks.length === 0
+                ? 'Create your first task to get started.'
+                : 'Try adjusting your filters to see more tasks.'
             }
-          />
-        ) : viewMode === 'kanban' ? (
-          <KanbanBoard
-            tasks={filteredTasks}
-            onStatusChange={handleStatusChange}
-            onEdit={openEditTask}
-            onDelete={handleDeleteTask}
-          />
-        ) : filteredTasks.length === 0 ? (
-          <EmptyState
-            icon={<ClipboardList size={64} />}
-            title="No matching tasks"
-            description="Try adjusting your filters to see more tasks."
+            action={
+              tasks.length === 0 ? (
+                <button
+                  onClick={() => {
+                    setEditingTask(null);
+                    setTaskModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <Plus size={16} />
+                  Create Task
+                </button>
+              ) : undefined
+            }
           />
         ) : (
           <div className="space-y-3">
